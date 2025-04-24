@@ -22,14 +22,9 @@ def save_tasks(tasks):
         print("Error: Could not save tasks to file.")
         
 def get_next_id(tasks):
-    """Generate the next available ID that doesn't conflict with existing or deleted tasks"""
     if not tasks:
         return 1
-    
-    # Get all existing IDs
     existing_ids = {task["id"] for task in tasks}
-    
-    # Find the first available ID starting from 1
     next_id = 1
     while next_id in existing_ids:
         next_id += 1
