@@ -2,83 +2,153 @@ import json
 import os
 import datetime
 
-tasks = []
-print("--------------\nwelcome to task tracker io\nplease choose an action\n")
+def load_tasks():
+    """Load tasks from JSON file if it exists"""
+    tasks = []
+    if os.path.exists("tasks.json"):
+        try:
+            with open("tasks.json", 'r') as file:
+                tasks = json.load(file)
+        except (json.JSONDecodeError, IOError):
+            print("Warning: Could not load tasks from file. Starting with empty task list.")
+    return tasks
 
-if os.path.exists("tasks.json"):
-    with open("tasks.json", 'r') as file:
-        tasks = json.load(file)
-def start():
-  print("--------------")
-  print("1- Add task")
-  print("2- remove task")
-  print("3- list all tasks")
-  print("4- update task")
-  print("5- to quit")
-  action = int(input("\nenter number of your desired action: "))
-  return action
+def save_tasks(tasks):
+    """Save tasks to JSON file"""
+    try:
+        with open("tasks.json", 'w') as file:
+            json.dump(tasks, file, indent=4)
+    except IOError:
+        print("Error: Could not save tasks to file.")
+        
+def get_next_id(tasks):
+    """Generate the next available ID that doesn't conflict with existing or deleted tasks"""
+    if not tasks:
+        return 1
+    
+    # Get all existing IDs
+    existing_ids = {task["id"] for task in tasks}
+    
+    # Find the first available ID starting from 1
+    next_id = 1
+    while next_id in existing_ids:
+        next_id += 1
+    
+    return next_id
 
-action = start()
+def display_menu():
+    """Display the menu and get user input"""
+    print("\n--------------")
+    print("1- Add task")
+    print("2- Remove task")
+    print("3- List all tasks")
+    print("4- Update task")
+    print("5- Quit")
+    while True:
+        try:
+            action = int(input("\nEnter number of your desired action: "))
+            if 1 <= action <= 5:
+                return action
+            print("Please enter a number between 1 and 5")
+        except ValueError:
+            print("Please enter a valid number")
 
-def addTask():
-    title = input("enter the title of your task: ")
-    new_id = len(tasks) + 1 
-    time = datetime.datetime.now()
-    creationDate = f"{time.year}/{time.month}/{time.day}"
+def add_task(tasks):
+    """Add a new task to the list with a unique ID"""
+    title = input("Enter the title of your task: ").strip()
+    if not title:
+        print("Task title cannot be empty!")
+        return
+    
+    new_id = get_next_id(tasks)
+    creation_date = datetime.datetime.now().strftime("%Y/%m/%d")
+    
     new_task = {
         "title": title,
         "id": new_id,
-        "dateCreated" : creationDate
+        "dateCreated": creation_date
     }
+    
     tasks.append(new_task)
-    with open("tasks.json", 'w') as file:
-        json.dump(tasks, file, indent=4)
+    save_tasks(tasks)
     print(f"New task added: {title} (ID: {new_id})")
-    start()
 
-def removeTask():
-    task_id = int(input("Enter the ID of the task to remove: "))
+
+def remove_task(tasks):
+    """Remove a task by ID"""
+    if not tasks:
+        print("No tasks available to remove")
+        return
+    
+    list_tasks(tasks)
+    try:
+        task_id = int(input("Enter the ID of the task to remove: "))
+    except ValueError:
+        print("Invalid ID. Please enter a number.")
+        return
+    
     for task in tasks:
         if task["id"] == task_id:
             tasks.remove(task)
-            with open("tasks.json", 'w') as file:
-                json.dump(tasks, file, indent=4)
+            save_tasks(tasks)
             print(f"Task {task_id} removed successfully")
             return
+    
     print(f"Task with ID {task_id} not found")
-    start()
 
-def listTasks():
+def list_tasks(tasks):
+  if not tasks:
+    print("No tasks found")
+  else:
+    print("\nCurrent Tasks:")
+    for task in tasks:
+        print(f"ID: {task['id']} - {task['title']}")
+def update_task(tasks):
+    """Update a task's title"""
     if not tasks:
-        print("No tasks found")
-    else:
-        print("\nCurrent Tasks:")
-        for task in tasks:
-            print(f"ID: {task['id']} - {task['title']}")
-    start()
-            
-def updateTasks():
-  task_id = int(input("Enter the ID of the task to update: "))
-  for task in tasks:
-    if task["id"] == task_id:
-      newTitle = input("Enter the new title: ")
-      task["title"] = newTitle
-      with open("tasks.json", 'w') as file:
-                json.dump(tasks, file, indent=4)
-      print(f"Task {task_id} updated successfully")
-      return
-  print(f"Task with ID {task_id} not found")
+        print("No tasks available to update")
+        return
+    
+    list_tasks(tasks)
+    try:
+        task_id = int(input("Enter the ID of the task to update: "))
+    except ValueError:
+        print("Invalid ID. Please enter a number.")
+        return
+    
+    for task in tasks:
+        if task["id"] == task_id:
+            new_title = input("Enter the new title: ").strip()
+            if not new_title:
+                print("Task title cannot be empty!")
+                return
+                
+            task["title"] = new_title
+            save_tasks(tasks)
+            print(f"Task {task_id} updated successfully")
+            return
+    
+    print(f"Task with ID {task_id} not found")
 
-match action:
-    case 1:
-        addTask()
-    case 2:
-        removeTask()
-    case 3:
-        listTasks()
-    case 4:
-        updateTasks()
-    case 5:
-        print("Bye!")
-    case _:
-        print("Invalid action")
+def main():
+    """Main program loop"""
+    print("--------------\nWelcome to Task Tracker IO")
+    tasks = load_tasks()
+    
+    while True:
+        action = display_menu()
+        
+        if action == 1:
+            add_task(tasks)
+        elif action == 2:
+            remove_task(tasks)
+        elif action == 3:
+            list_tasks(tasks)
+        elif action == 4:
+            update_task(tasks)
+        elif action == 5:
+            print("Goodbye!")
+            break
+
+if __name__ == "__main__":
+    main()
